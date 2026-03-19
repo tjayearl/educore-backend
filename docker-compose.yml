@@ -1,0 +1,44 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: educore-postgres
+    environment:
+      POSTGRES_USER: educore
+      POSTGRES_PASSWORD: educore123
+      POSTGRES_DB: educore_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  mongodb:
+    image: mongo:7
+    container_name: educore-mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: educore
+      MONGO_INITDB_ROOT_PASSWORD: educore123
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  backend:
+    build: .
+    container_name: educore-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=development
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - mongodb
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run dev
+
+volumes:
+  postgres_data:
+  mongo_data:

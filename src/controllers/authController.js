@@ -71,8 +71,11 @@ const login = async (req, res) => {
 
     res.json({ user, token });
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Login error details:', error.message);
+    // If in development or if the error is a configuration issue, log the stack
+    if (process.env.NODE_ENV !== 'production' || !process.env.JWT_SECRET) console.error(error.stack);
+    
+    res.status(500).json({ message: 'Server error. Check server logs for details.' });
   }
 };
 

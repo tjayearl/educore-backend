@@ -6,6 +6,14 @@ const lessonRoutes = require('./routes/lessonRoutes');
 const progressRoutes = require('./routes/progressRoutes');
 const activityRoutes = require('./routes/activityRoutes');
 
+// Check critical environment variables
+if (!process.env.JWT_SECRET) {
+  console.warn('WARNING: JWT_SECRET is not defined. Authentication will fail.');
+}
+if (!process.env.PG_HOST) {
+  console.warn('WARNING: PG_HOST is not defined. Database connection will fail.');
+}
+
 // Initialize express
 const app = express();
 

@@ -42,6 +42,16 @@ const initPostgresDB = async () => {
       );
     `);
 
+    // Auto-Migration: Fix audit_logs schema for MongoDB compatibility
+    // This handles the case where the table was created with INTEGER types previously
+    await pool.query(`
+      ALTER TABLE audit_logs 
+      ALTER COLUMN entity_id TYPE VARCHAR(255),
+      ALTER COLUMN details TYPE TEXT;
+    `).catch(() => {
+      // Ignore errors (e.g., if table doesn't exist yet or types are already correct)
+    });
+
     console.log('✓ PostgreSQL tables initialized');
   } catch (error) {
     console.error('PostgreSQL initialization error:', error);

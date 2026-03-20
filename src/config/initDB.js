@@ -35,8 +35,8 @@ const initPostgresDB = async () => {
         user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
         action VARCHAR(100) NOT NULL,
         entity_type VARCHAR(50),
-        entity_id INTEGER,
-        details JSONB,
+        entity_id VARCHAR(255),
+        details TEXT,
         ip_address VARCHAR(45),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );

@@ -50,8 +50,16 @@ export const register = async (req, res) => {
 
     users.push(newUser);
 
+    // ✅ CREATE TOKEN (NEW!)
+    const token = jwt.sign(
+      { id: newUser.id, role: newUser.role },
+      process.env.JWT_SECRET || "SECRET_KEY",
+      { expiresIn: process.env.JWT_EXPIRES_IN || "1d" }
+    );
+
     res.status(201).json({
       message: "User registered successfully",
+      token, // ✅ NOW RETURNS TOKEN
       user: {
         id: newUser.id,
         full_name: newUser.full_name,
@@ -98,8 +106,8 @@ export const login = async (req, res) => {
     // ✅ CREATE TOKEN
     const token = jwt.sign(
       { id: user.id, role: user.role },
-      "SECRET_KEY", // replace later with env variable
-      { expiresIn: "1d" }
+      process.env.JWT_SECRET || "SECRET_KEY",
+      { expiresIn: process.env.JWT_EXPIRES_IN || "1d" }
     );
 
     res.status(200).json({

@@ -1,6 +1,6 @@
-const express = require('express');
-const { getAllActivities, getUserActivities } = require('../controllers/activityController');
-const { authMiddleware, adminOnly } = require('../middleware/auth');
+import express from 'express';
+import { getAllActivities, getUserActivities } from '../controllers/activityController.js';
+import { authMiddleware, adminOnly } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -10,4 +10,4 @@ router.get('/all', authMiddleware, adminOnly, getAllActivities);
 // Users can view their own activities
 router.get('/my-activities', authMiddleware, getUserActivities);
 
-module.exports = router;
+export default router;

@@ -1,7 +1,7 @@
-const pool = require('../config/postgres');
-const Lesson = require('../models/Lesson');
+import pool from '../config/postgres.js';
+import Lesson from '../models/Lesson.js';
 
-const createCourse = async (req, res) => {
+export const createCourse = async (req, res) => {
   try {
     const { title, description, category } = req.body;
     const created_by = req.user.id;
@@ -22,7 +22,7 @@ const createCourse = async (req, res) => {
   }
 };
 
-const getAllCourses = async (req, res) => {
+export const getAllCourses = async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
@@ -48,7 +48,7 @@ const getAllCourses = async (req, res) => {
   }
 };
 
-const getCourseById = async (req, res) => {
+export const getCourseById = async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -77,7 +77,7 @@ const getCourseById = async (req, res) => {
   }
 };
 
-const getMyCourses = async (req, res) => {
+export const getMyCourses = async (req, res) => {
   try {
     const created_by = req.user.id;
 
@@ -101,7 +101,7 @@ const getMyCourses = async (req, res) => {
   }
 };
 
-const updateCourse = async (req, res) => {
+export const updateCourse = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, description, category } = req.body;
@@ -122,7 +122,7 @@ const updateCourse = async (req, res) => {
   }
 };
 
-const deleteCourse = async (req, res) => {
+export const deleteCourse = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -140,13 +140,4 @@ const deleteCourse = async (req, res) => {
     console.error('Delete course error:', error);
     res.status(500).json({ message: 'Server error' });
   }
-};
-
-module.exports = {
-  createCourse,
-  getAllCourses,
-  getMyCourses,
-  getCourseById,
-  updateCourse,
-  deleteCourse
 };

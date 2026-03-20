@@ -1,4 +1,4 @@
-const pool = require('./postgres');
+import pool from './postgres.js';
 
 const initPostgresDB = async () => {
   try {
@@ -58,4 +58,4 @@ const initPostgresDB = async () => {
   }
 };
 
-module.exports = initPostgresDB;
+export default initPostgresDB;

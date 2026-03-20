@@ -1,4 +1,4 @@
-const pool = require('../config/postgres');
+import pool from '../config/postgres.js';
 
 const auditLogger = (action, entityType) => {
   return async (req, res, next) => {
@@ -42,4 +42,4 @@ const auditLogger = (action, entityType) => {
   };
 };
 
-module.exports = auditLogger;
+export default auditLogger;

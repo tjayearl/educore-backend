@@ -1,6 +1,6 @@
-const UserProgress = require('../models/UserProgress');
+import UserProgress from '../models/UserProgress.js';
 
-const markLessonComplete = async (req, res) => {
+export const markLessonComplete = async (req, res) => {
   try {
     const { courseId, lessonId } = req.params;
     const userId = req.user.id;
@@ -33,7 +33,7 @@ const markLessonComplete = async (req, res) => {
   }
 };
 
-const getUserProgress = async (req, res) => {
+export const getUserProgress = async (req, res) => {
   try {
     const { courseId } = req.params;
     const userId = req.user.id;
@@ -52,9 +52,4 @@ const getUserProgress = async (req, res) => {
     console.error('Get progress error:', error);
     res.status(500).json({ message: 'Server error' });
   }
-};
-
-module.exports = {
-  markLessonComplete,
-  getUserProgress
 };

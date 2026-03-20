@@ -1,4 +1,4 @@
-const pool = require('../config/postgres');
+import pool from '../config/postgres.js';
 
 const getAllActivities = async (req, res) => {
   try {
@@ -38,4 +38,4 @@ const getUserActivities = async (req, res) => {
   }
 };
 
-module.exports = { getAllActivities, getUserActivities };
+export { getAllActivities, getUserActivities };

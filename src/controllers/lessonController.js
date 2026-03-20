@@ -1,7 +1,7 @@
-const Lesson = require('../models/Lesson');
-const { isValidUrl } = require('../utils/validation');
+import Lesson from '../models/Lesson.js';
+import { isValidUrl } from '../utils/validation.js';
 
-const addLesson = async (req, res) => {
+export const addLesson = async (req, res) => {
   try {
     const { courseId } = req.params;
     const { title, contentType, contentUrl, contentBody, order, metadata } = req.body;
@@ -37,7 +37,7 @@ const addLesson = async (req, res) => {
   }
 };
 
-const getLessonsByCourse = async (req, res) => {
+export const getLessonsByCourse = async (req, res) => {
   try {
     const { courseId } = req.params;
     const lessons = await Lesson.find({ courseId: parseInt(courseId) }).sort({ order: 1 });
@@ -48,7 +48,7 @@ const getLessonsByCourse = async (req, res) => {
   }
 };
 
-const updateLesson = async (req, res) => {
+export const updateLesson = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -70,7 +70,7 @@ const updateLesson = async (req, res) => {
   }
 };
 
-const deleteLesson = async (req, res) => {
+export const deleteLesson = async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -85,11 +85,4 @@ const deleteLesson = async (req, res) => {
     console.error('Delete lesson error:', error);
     res.status(500).json({ message: 'Server error' });
   }
-};
-
-module.exports = {
-  addLesson,
-  getLessonsByCourse,
-  updateLesson,
-  deleteLesson
 };

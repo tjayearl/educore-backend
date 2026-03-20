@@ -1,10 +1,10 @@
-const express = require('express');
-const cors = require('cors');
-const authRoutes = require('./routes/authRoutes');
-const courseRoutes = require('./routes/courseRoutes');
-const lessonRoutes = require('./routes/lessonRoutes');
-const progressRoutes = require('./routes/progressRoutes');
-const activityRoutes = require('./routes/activityRoutes');
+import express from 'express';
+import cors from 'cors';
+import authRoutes from './routes/authRoutes.js';
+import courseRoutes from './routes/courseRoutes.js';
+import lessonRoutes from './routes/lessonRoutes.js';
+import progressRoutes from './routes/progressRoutes.js';
+import activityRoutes from './routes/activityRoutes.js';
 
 // Check critical environment variables
 if (!process.env.JWT_SECRET) {
@@ -69,4 +69,4 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Internal Server Error' });
 });
 
-module.exports = app;
+export default app;

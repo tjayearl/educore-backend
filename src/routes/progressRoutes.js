@@ -1,10 +1,10 @@
-const express = require('express');
-const { markLessonComplete, getUserProgress } = require('../controllers/progressController');
-const { authMiddleware } = require('../middleware/auth');
+import express from 'express';
+import { markLessonComplete, getUserProgress } from '../controllers/progressController.js';
+import { authMiddleware } from '../middleware/auth.js';
 
 const router = express.Router();
 
 router.get('/:courseId', authMiddleware, getUserProgress);
 router.post('/:courseId/lessons/:lessonId/complete', authMiddleware, markLessonComplete);
 
-module.exports = router;
+export default router;

@@ -1,4 +1,4 @@
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
 
 const authMiddleware = (req, res, next) => {
   try {
@@ -30,4 +30,4 @@ const adminOnly = (req, res, next) => {
   }
 };
 
-module.exports = { authMiddleware, adminOnly };
+export { authMiddleware, adminOnly };

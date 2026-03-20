@@ -1,12 +1,12 @@
-const express = require('express');
-const { 
+import express from 'express';
+import { 
   createCourse, getAllCourses, getCourseById, updateCourse, deleteCourse, getMyCourses 
-} = require('../controllers/courseController');
-const { 
+} from '../controllers/courseController.js';
+import { 
   addLesson, getLessonsByCourse 
-} = require('../controllers/lessonController');
-const { authMiddleware, adminOnly } = require('../middleware/auth');
-const auditLogger = require('../middleware/auditLogger');
+} from '../controllers/lessonController.js';
+import { authMiddleware, adminOnly } from '../middleware/auth.js';
+import auditLogger from '../middleware/auditLogger.js';
 
 const router = express.Router();
 
@@ -26,4 +26,4 @@ router.get('/my/created', authMiddleware, adminOnly, getMyCourses);
 router.get('/:courseId/lessons', getLessonsByCourse);
 router.post('/:courseId/lessons', authMiddleware, adminOnly, auditLogger('ADD_LESSON', 'lesson'), addLesson);
 
-module.exports = router;
+export default router;

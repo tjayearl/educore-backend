@@ -5,7 +5,11 @@ const { isValidEmail, isStrongPassword } = require('../utils/validation');
 
 const register = async (req, res) => {
   try {
-    const { email, password, full_name, role } = req.body;
+    let { email, password, full_name, role } = req.body;
+
+    // Sanitize input
+    email = email ? email.trim().toLowerCase() : null;
+    full_name = full_name ? full_name.trim() : null;
 
     if (!email || !password || !full_name) {
       return res.status(400).json({ message: 'All fields are required' });
@@ -48,7 +52,9 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    let { email, password } = req.body;
+
+    if (email) email = email.trim().toLowerCase();
 
     // Find user
     const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);

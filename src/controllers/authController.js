@@ -1,51 +1,47 @@
 const pool = require('../config/postgres');
 const { hashPassword, comparePassword } = require('../utils/passwordUtils');
 const { generateToken } = require('../utils/jwtUtils');
+const { isValidEmail, isStrongPassword } = require('../utils/validation');
 
 const register = async (req, res) => {
   try {
-    // Accept both camelCase and snake_case
-    const { email, password, full_name, fullName, role } = req.body;
-    const name = full_name || fullName;
+    const { email, password, full_name, role } = req.body;
 
-    // Validate input
-    if (!email || !password || !name) {
-      return res.status(400).json({ message: 'Email, password, and full name are required' });
+    if (!email || !password || !full_name) {
+      return res.status(400).json({ message: 'All fields are required' });
     }
 
-    // Default to 'learner' if role not specified, allow 'admin' or 'learner'
-    const userRole = role && ['admin', 'learner'].includes(role) ? role : 'learner';
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ message: 'Invalid email format' });
+    }
+
+    if (!isStrongPassword(password)) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters long' });
+    }
 
     // Check if user exists
-    const existingUser = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-    if (existingUser.rows.length > 0) {
+    const userCheck = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (userCheck.rows.length > 0) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
     // Hash password
-    const password_hash = await hashPassword(password);
+    const hashedPassword = await hashPassword(password);
 
-    // Insert user
-    const result = await pool.query(
-      'INSERT INTO users (email, password_hash, full_name, role) VALUES ($1, $2, $3, $4) RETURNING id, email, full_name, role, created_at',
-      [email, password_hash, name, userRole]
+    // Insert new user (defaulting to 'learner' if role not provided/valid)
+    const userRole = role === 'admin' ? 'admin' : 'learner';
+    
+    const newUser = await pool.query(
+      'INSERT INTO users (email, password_hash, full_name, role) VALUES ($1, $2, $3, $4) RETURNING id, email, full_name, role',
+      [email, hashedPassword, full_name, userRole]
     );
 
-    const user = result.rows[0];
-    const token = generateToken({ id: user.id, email: user.email, role: user.role });
+    const user = newUser.rows[0];
+    const token = generateToken({ id: user.id, role: user.role });
 
-    res.status(201).json({ 
-      message: 'Registration successful',
-      user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.full_name, // Return as camelCase for frontend
-        role: user.role
-      },
-      token 
-    });
+    res.status(201).json({ user, token });
   } catch (error) {
-    console.error('Registration error:', error);
+    console.error('Register error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -54,36 +50,26 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password required' });
-    }
-
     // Find user
     const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    
     if (result.rows.length === 0) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     const user = result.rows[0];
+    const isMatch = await comparePassword(password, user.password_hash);
 
-    // Verify password
-    const isValid = await comparePassword(password, user.password_hash);
-    if (!isValid) {
+    if (!isMatch) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const token = generateToken({ id: user.id, email: user.email, role: user.role });
+    const token = generateToken({ id: user.id, role: user.role });
 
-    res.json({
-      message: 'Login successful',
-      user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.full_name, // Return as camelCase for frontend
-        role: user.role
-      },
-      token
-    });
+    // Remove password from response
+    delete user.password_hash;
+
+    res.json({ user, token });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Server error' });

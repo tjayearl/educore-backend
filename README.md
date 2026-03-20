@@ -6,6 +6,10 @@ RESTful API for a Learning Management System built with Node.js, Express, Postgr
 **API Base URL**: https://educore-backend-7p4o.onrender.com  
 **Health Check**: https://educore-backend-7p4o.onrender.com/health
 
+> **⚠️ Development Note**: The production PostgreSQL database restricts external connections. 
+> For frontend development, please utilize the **Live API URL** above. 
+> There is no need to run the backend locally unless you are developing backend features with a local database.
+
 ## 📋 Overview
 Educore LMS backend is a full-stack learning management system API that demonstrates:
 
@@ -71,6 +75,27 @@ Built as part of the **Kenya Broadcasting Corporation (KBC) Junior Full-Stack De
 - **MongoDB Collections**
   - `lessons` { courseId, title, contentType, contentUrl, contentBody, order }
   - `userprogresses` { userId, courseId, completedLessons: [{ lessonId, completedAt }], lastAccessedAt }
+
+## 🏗️ Microservices Decomposition Strategy
+Although currently built as a modular monolith, the system is designed with "Boundaries" that allow for easy splitting into microservices:
+
+**1. Identity Service (Auth)**
+- **Responsibilities**: User registration, login, JWT issuance, Role management.
+- **Database**: PostgreSQL (Users table).
+- **Communication**: synchronous REST for login, async events for "UserCreated".
+
+**2. Content Management Service (CMS)**
+- **Responsibilities**: Course creation, Lesson management (Video/Text/Quiz).
+- **Database**: MongoDB (Lessons), PostgreSQL (Course Metadata).
+- **Why Split?**: High read traffic from learners vs low write traffic from admins. Scaling independent of auth.
+
+**3. Learning Progress Service**
+- **Responsibilities**: Tracking completions, calculating scores, Audit logging.
+- **Database**: MongoDB (UserProgress), PostgreSQL (AuditLogs).
+- **Communication**: Listens for "LessonCompleted" events to update analytics.
+
+**4. API Gateway**
+- A unified entry point (e.g., Nginx or Kong) would route requests (`/auth/*`, `/courses/*`) to the respective services.
 
 ## 🚀 Getting Started
 ### Prerequisites

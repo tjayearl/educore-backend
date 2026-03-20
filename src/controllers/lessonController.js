@@ -1,25 +1,36 @@
 const Lesson = require('../models/Lesson');
+const { isValidUrl } = require('../utils/validation');
 
 const addLesson = async (req, res) => {
   try {
     const { courseId } = req.params;
-    const { title, contentType, contentUrl, contentBody, order } = req.body;
+    const { title, contentType, contentUrl, contentBody, order, metadata } = req.body;
 
+    // Validation
     if (!title || !contentType) {
-      return res.status(400).json({ message: 'Title and content type required' });
+      return res.status(400).json({ message: 'Title and content type are required' });
     }
 
-    const lesson = new Lesson({
+    if (contentType === 'video' && (!contentUrl || !isValidUrl(contentUrl))) {
+      return res.status(400).json({ message: 'Valid video URL is required for video lessons' });
+    }
+
+    if ((contentType === 'text' || contentType === 'quiz') && !contentBody && !metadata) {
+      return res.status(400).json({ message: 'Content body or metadata is required for text/quiz lessons' });
+    }
+
+    const newLesson = new Lesson({
       courseId: parseInt(courseId),
       title,
       contentType,
       contentUrl,
       contentBody,
+      metadata,
       order: order || 0
     });
 
-    await lesson.save();
-    res.status(201).json(lesson);
+    const savedLesson = await newLesson.save();
+    res.status(201).json(savedLesson);
   } catch (error) {
     console.error('Add lesson error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -40,14 +51,19 @@ const getLessonsByCourse = async (req, res) => {
 const updateLesson = async (req, res) => {
   try {
     const { id } = req.params;
-    const updates = req.body;
+    const updateData = req.body;
 
-    const lesson = await Lesson.findByIdAndUpdate(id, updates, { new: true });
-    if (!lesson) {
+    const updatedLesson = await Lesson.findByIdAndUpdate(
+      id, 
+      { $set: updateData },
+      { new: true }
+    );
+
+    if (!updatedLesson) {
       return res.status(404).json({ message: 'Lesson not found' });
     }
 
-    res.json(lesson);
+    res.json(updatedLesson);
   } catch (error) {
     console.error('Update lesson error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -57,13 +73,14 @@ const updateLesson = async (req, res) => {
 const deleteLesson = async (req, res) => {
   try {
     const { id } = req.params;
-    const lesson = await Lesson.findByIdAndDelete(id);
-
-    if (!lesson) {
+    
+    const deletedLesson = await Lesson.findByIdAndDelete(id);
+    
+    if (!deletedLesson) {
       return res.status(404).json({ message: 'Lesson not found' });
     }
 
-    res.json({ message: 'Lesson deleted successfully' });
+    res.json({ message: 'Lesson deleted' });
   } catch (error) {
     console.error('Delete lesson error:', error);
     res.status(500).json({ message: 'Server error' });

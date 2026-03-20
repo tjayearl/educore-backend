@@ -1,32 +1,29 @@
 const express = require('express');
 const { 
-  createCourse, 
-  getAllCourses, 
-  getMyCourses,
-  getCourseById, 
-  updateCourse, 
-  deleteCourse 
+  createCourse, getAllCourses, getCourseById, updateCourse, deleteCourse, getMyCourses 
 } = require('../controllers/courseController');
+const { 
+  addLesson, getLessonsByCourse 
+} = require('../controllers/lessonController');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
 const auditLogger = require('../middleware/auditLogger');
+
 const router = express.Router();
 
-// Admin: Create course
-router.post('/', authMiddleware, adminOnly, auditLogger('COURSE_CREATED', 'course'), createCourse);
+// Public course viewing
+router.get('/', getAllCourses);
+router.get('/:id', getCourseById);
 
-// Both: Browse all courses (catalog)
-router.get('/', authMiddleware, getAllCourses);
+// Course Management (Admin)
+router.post('/', authMiddleware, adminOnly, auditLogger('CREATE_COURSE', 'course'), createCourse);
+router.put('/:id', authMiddleware, adminOnly, auditLogger('UPDATE_COURSE', 'course'), updateCourse);
+router.delete('/:id', authMiddleware, adminOnly, auditLogger('DELETE_COURSE', 'course'), deleteCourse);
 
-// Admin: View my created courses
-router.get('/my-courses', authMiddleware, adminOnly, getMyCourses);
+// Instructor specific
+router.get('/my/created', authMiddleware, adminOnly, getMyCourses);
 
-// Both: View course details
-router.get('/:id', authMiddleware, getCourseById);
-
-// Admin: Update course
-router.put('/:id', authMiddleware, adminOnly, auditLogger('COURSE_UPDATED', 'course'), updateCourse);
-
-// Admin: Delete course
-router.delete('/:id', authMiddleware, adminOnly, auditLogger('COURSE_DELETED', 'course'), deleteCourse);
+// Nested Lesson Routes
+router.get('/:courseId/lessons', getLessonsByCourse);
+router.post('/:courseId/lessons', authMiddleware, adminOnly, auditLogger('ADD_LESSON', 'lesson'), addLesson);
 
 module.exports = router;

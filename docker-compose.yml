@@ -38,6 +38,17 @@ services:
       - .:/app
       - /app/node_modules
     command: npm run dev
+  
+  frontend:
+    image: node:18-alpine
+    container_name: educore-frontend
+    working_dir: /app
+    # Assuming frontend code is in a sibling directory named 'frontend'
+    # volumes:
+    #   - ../frontend:/app
+    ports:
+      - "3000:3000"
+    command: echo "Frontend service placeholder - Mount volume to run"
 
 volumes:
   postgres_data:

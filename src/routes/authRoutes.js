@@ -4,7 +4,7 @@ const auditLogger = require('../middleware/auditLogger');
 
 const router = express.Router();
 
-router.post('/register', auditLogger('USER_REGISTERED', 'user'), register);
-router.post('/login', auditLogger('USER_LOGGED_IN', 'user'), login);
+router.post('/register', auditLogger('REGISTER', 'user'), register);
+router.post('/login', auditLogger('LOGIN', 'session'), login);
 
 module.exports = router;

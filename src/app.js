@@ -5,6 +5,7 @@ import courseRoutes from './routes/courseRoutes.js';
 import lessonRoutes from './routes/lessonRoutes.js';
 import progressRoutes from './routes/progressRoutes.js';
 import activitiesRoutes from './routes/activitiesRoutes.js';
+import statsRoutes from './routes/statsRoutes.js';
 
 const app = express();
 
@@ -30,6 +31,8 @@ app.get('/', (req, res) => {
         getAll: 'GET /api/courses',
         getById: 'GET /api/courses/:id',
         create: 'POST /api/courses (Admin only)',
+        update: 'PUT /api/courses/:id (Admin only)',
+        delete: 'DELETE /api/courses/:id (Admin only)',
         getMyCourses: 'GET /api/courses/my/created (Admin only)'
       },
       lessons: {
@@ -44,6 +47,9 @@ app.get('/', (req, res) => {
       activities: {
         getAll: 'GET /api/activities/all (Admin only)',
         getStats: 'GET /api/activities/stats (Admin only)'
+      },
+      stats: {
+        adminStats: 'GET /api/stats/admin (Admin only)'
       }
     },
     documentation: 'https://github.com/yourusername/educore-lms'
@@ -65,6 +71,7 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/courses', lessonRoutes);
 app.use('/api/progress', progressRoutes);
 app.use('/api/activities', activitiesRoutes);
+app.use('/api/stats', statsRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -77,7 +84,8 @@ app.use((req, res) => {
       '/api/auth/*',
       '/api/courses/*',
       '/api/progress/*',
-      '/api/activities/*'
+      '/api/activities/*',
+      '/api/stats/*'
     ]
   });
 });

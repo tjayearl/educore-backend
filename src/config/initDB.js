@@ -1,61 +1,60 @@
 import pool from './postgres.js';
 
-const initPostgresDB = async () => {
+export const initPostgresDB = async () => {
   try {
-    // Users table
+    // Create users table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        password_hash VARCHAR(255) NOT NULL,
         full_name VARCHAR(255) NOT NULL,
-        role VARCHAR(50) NOT NULL DEFAULT 'learner' CHECK (role IN ('admin', 'learner')),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        role VARCHAR(50) DEFAULT 'learner',
+        created_at TIMESTAMP DEFAULT NOW()
+      )
     `);
 
-    // Courses table
+    // Create courses table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS courses (
         id SERIAL PRIMARY KEY,
         title VARCHAR(255) NOT NULL,
         description TEXT,
         category VARCHAR(100),
-        created_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
+        instructor_id INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT NOW()
+      )
     `);
 
-    // Audit logs table
+    // Create lessons table
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS audit_logs (
+      CREATE TABLE IF NOT EXISTS lessons (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-        action VARCHAR(100) NOT NULL,
-        entity_type VARCHAR(50),
-        entity_id VARCHAR(255),
-        details TEXT,
-        ip_address VARCHAR(45),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
+        course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        content_type VARCHAR(50),
+        content_url TEXT,
+        content_body TEXT,
+        lesson_order INTEGER,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
     `);
 
-    // Auto-Migration: Fix audit_logs schema for MongoDB compatibility
-    // This handles the case where the table was created with INTEGER types previously
+    // Create progress table
     await pool.query(`
-      ALTER TABLE audit_logs 
-      ALTER COLUMN entity_id TYPE VARCHAR(255),
-      ALTER COLUMN details TYPE TEXT;
-    `).catch(() => {
-      // Ignore errors (e.g., if table doesn't exist yet or types are already correct)
-    });
+      CREATE TABLE IF NOT EXISTS progress (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
+        lesson_id INTEGER REFERENCES lessons(id) ON DELETE CASCADE,
+        completed_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(user_id, lesson_id)
+      )
+    `);
 
     console.log('✓ PostgreSQL tables initialized');
   } catch (error) {
     console.error('PostgreSQL initialization error:', error);
+    throw error;
   }
 };
-
-export default initPostgresDB;

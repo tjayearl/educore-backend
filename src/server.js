@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import app from './app.js';
 import connectMongoDB from './config/mongodb.js';
-import initPostgresDB from './config/initDB.js';
+import { initPostgresDB } from './config/initDB.js';
 
 const PORT = process.env.PORT || 5000;
 

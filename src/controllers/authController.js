@@ -1,8 +1,6 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-
-// Fake DB for now (replace with real DB later)
-let users = [];
+import pool from "../config/postgres.js";
 
 // ================= REGISTER =================
 export const register = async (req, res) => {
@@ -15,7 +13,6 @@ export const register = async (req, res) => {
         message: "All fields are required",
       });
     }
-
     if (password.length < 8) {
       return res.status(400).json({
         message: "Password must be at least 8 characters",
@@ -23,8 +20,12 @@ export const register = async (req, res) => {
     }
 
     // ✅ CHECK IF USER EXISTS
-    const existingUser = users.find((user) => user.email === email);
-    if (existingUser) {
+    const existingUser = await pool.query(
+      "SELECT * FROM users WHERE email = $1",
+      [email]
+    );
+    
+    if (existingUser.rows.length > 0) {
       return res.status(400).json({
         message: "Email already registered",
       });
@@ -39,27 +40,26 @@ export const register = async (req, res) => {
       userRole = "admin";
     }
 
-    // ✅ CREATE USER
-    const newUser = {
-      id: Date.now(),
-      full_name,
-      email,
-      password: hashedPassword,
-      role: userRole,
-    };
+    // ✅ CREATE USER IN DATABASE
+    const result = await pool.query(
+      `INSERT INTO users (full_name, email, password, role, created_at) 
+       VALUES ($1, $2, $3, $4, NOW()) 
+       RETURNING id, full_name, email, role`,
+      [full_name, email, hashedPassword, userRole]
+    );
 
-    users.push(newUser);
+    const newUser = result.rows[0];
 
-    // ✅ CREATE TOKEN (NEW!)
+    // ✅ CREATE TOKEN
     const token = jwt.sign(
       { id: newUser.id, role: newUser.role },
       process.env.JWT_SECRET || "SECRET_KEY",
-      { expiresIn: process.env.JWT_EXPIRES_IN || "1d" }
+      { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
     );
 
     res.status(201).json({
       message: "User registered successfully",
-      token, // ✅ NOW RETURNS TOKEN
+      token,
       user: {
         id: newUser.id,
         full_name: newUser.full_name,
@@ -87,13 +87,19 @@ export const login = async (req, res) => {
       });
     }
 
-    // ✅ FIND USER
-    const user = users.find((u) => u.email === email);
-    if (!user) {
+    // ✅ FIND USER IN DATABASE
+    const result = await pool.query(
+      "SELECT * FROM users WHERE email = $1",
+      [email]
+    );
+
+    if (result.rows.length === 0) {
       return res.status(401).json({
         message: "Invalid credentials",
       });
     }
+
+    const user = result.rows[0];
 
     // ✅ CHECK PASSWORD
     const isMatch = await bcrypt.compare(password, user.password);
@@ -107,7 +113,7 @@ export const login = async (req, res) => {
     const token = jwt.sign(
       { id: user.id, role: user.role },
       process.env.JWT_SECRET || "SECRET_KEY",
-      { expiresIn: process.env.JWT_EXPIRES_IN || "1d" }
+      { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
     );
 
     res.status(200).json({

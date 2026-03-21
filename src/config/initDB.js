@@ -61,6 +61,8 @@ export const initPostgresDB = async () => {
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
         user_role VARCHAR(50),
+        user_name VARCHAR(255),
+        user_email VARCHAR(255),
         action VARCHAR(100) NOT NULL,
         resource_type VARCHAR(50),
         resource_id INTEGER,
@@ -72,6 +74,23 @@ export const initPostgresDB = async () => {
         response_body TEXT,
         created_at TIMESTAMP DEFAULT NOW()
       )
+    `);
+
+    // Add user_name and user_email columns if they don't exist (migration)
+    await pool.query(`
+      DO $$ 
+      BEGIN
+        BEGIN
+          ALTER TABLE audit_logs ADD COLUMN user_name VARCHAR(255);
+        EXCEPTION
+          WHEN duplicate_column THEN NULL;
+        END;
+        BEGIN
+          ALTER TABLE audit_logs ADD COLUMN user_email VARCHAR(255);
+        EXCEPTION
+          WHEN duplicate_column THEN NULL;
+        END;
+      END $$;
     `);
 
     // Create indexes if they don't exist

@@ -1,11 +1,10 @@
 import express from 'express';
-import { updateLesson, deleteLesson } from '../controllers/lessonController.js';
-import { authMiddleware, adminOnly } from '../middleware/auth.js';
-import auditLogger from '../middleware/auditLogger.js';
+import { authMiddleware, adminOnly } from '../middleware/authMiddleware.js';
+import { getLessonsByCourse, createLesson } from '../controllers/lessonController.js';
 
 const router = express.Router();
 
-router.put('/:id', authMiddleware, adminOnly, auditLogger('UPDATE_LESSON', 'lesson'), updateLesson);
-router.delete('/:id', authMiddleware, adminOnly, auditLogger('DELETE_LESSON', 'lesson'), deleteLesson);
+router.get('/:courseId/lessons', authMiddleware, getLessonsByCourse);
+router.post('/:courseId/lessons', authMiddleware, adminOnly, createLesson);
 
 export default router;

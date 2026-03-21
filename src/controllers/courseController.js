@@ -1,63 +1,48 @@
 import pool from '../config/postgres.js';
-import Lesson from '../models/Lesson.js';
 
-export const createCourse = async (req, res) => {
-  try {
-    const { title, description, category } = req.body;
-    const created_by = req.user.id;
-
-    if (!title || !description) {
-      return res.status(400).json({ message: 'Title and description are required' });
-    }
-
-    const result = await pool.query(
-      'INSERT INTO courses (title, description, category, created_by) VALUES ($1, $2, $3, $4) RETURNING *',
-      [title, description, category || 'General', created_by]
-    );
-
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    console.error('Create course error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
+// ================= GET ALL COURSES (Browse Catalog) =================
 export const getAllCourses = async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
-        c.*,
-        u.full_name as creator_name
+        c.id, 
+        c.title, 
+        c.description, 
+        c.category,
+        c.created_at,
+        u.full_name as instructor_name,
+        COUNT(DISTINCT l.id) as total_lessons
       FROM courses c
-      LEFT JOIN users u ON c.created_by = u.id
+      LEFT JOIN users u ON c.instructor_id = u.id
+      LEFT JOIN lessons l ON c.id = l.course_id
+      GROUP BY c.id, u.full_name
       ORDER BY c.created_at DESC
     `);
 
-    // Get lesson counts for each course
-    const coursesWithLessons = await Promise.all(
-      result.rows.map(async (course) => {
-        const lessonCount = await Lesson.countDocuments({ courseId: course.id });
-        return { ...course, lesson_count: lessonCount };
-      })
-    );
-
-    res.json(coursesWithLessons);
+    res.json({
+      courses: result.rows
+    });
   } catch (error) {
-    console.error('Get courses error:', error);
+    console.error('GET ALL COURSES ERROR:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
+// ================= GET COURSE BY ID (View Course Details) =================
 export const getCourseById = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const courseResult = await pool.query(`
       SELECT 
-        c.*,
-        u.full_name as creator_name
+        c.id, 
+        c.title, 
+        c.description, 
+        c.category,
+        c.created_at,
+        u.full_name as instructor_name
       FROM courses c
-      LEFT JOIN users u ON c.created_by = u.id
+      LEFT JOIN users u ON c.instructor_id = u.id
       WHERE c.id = $1
     `, [id]);
 
@@ -65,79 +50,66 @@ export const getCourseById = async (req, res) => {
       return res.status(404).json({ message: 'Course not found' });
     }
 
-    const lessons = await Lesson.find({ courseId: parseInt(id) }).sort({ order: 1 });
-
     res.json({
-      ...courseResult.rows[0],
-      lessons
+      course: courseResult.rows[0]
     });
   } catch (error) {
-    console.error('Get course error:', error);
+    console.error('GET COURSE BY ID ERROR:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
+// ================= CREATE COURSE (Admin Only) =================
+export const createCourse = async (req, res) => {
+  try {
+    const { title, description, category } = req.body;
+    const instructorId = req.user.id; // From auth middleware
+
+    if (!title || !description) {
+      return res.status(400).json({ message: 'Title and description are required' });
+    }
+
+    const result = await pool.query(`
+      INSERT INTO courses (title, description, category, instructor_id, created_at)
+      VALUES ($1, $2, $3, $4, NOW())
+      RETURNING id, title, description, category, created_at
+    `, [title, description, category || 'General', instructorId]);
+
+    res.status(201).json({
+      message: 'Course created successfully',
+      course: result.rows[0]
+    });
+  } catch (error) {
+    console.error('CREATE COURSE ERROR:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// ================= GET MY COURSES (Admin) =================
 export const getMyCourses = async (req, res) => {
   try {
-    const created_by = req.user.id;
+    const instructorId = req.user.id;
 
-    const result = await pool.query(
-      'SELECT * FROM courses WHERE created_by = $1 ORDER BY created_at DESC',
-      [created_by]
-    );
+    const result = await pool.query(`
+      SELECT 
+        c.id, 
+        c.title, 
+        c.description, 
+        c.category,
+        c.created_at,
+        COUNT(DISTINCT l.id) as total_lessons
+      FROM courses c
+      LEFT JOIN lessons l ON c.id = l.course_id
+      WHERE c.instructor_id = $1
+      GROUP BY c.id
+      ORDER BY c.created_at DESC
+    `, [instructorId]);
 
-    // Get lesson counts
-    const coursesWithLessons = await Promise.all(
-      result.rows.map(async (course) => {
-        const lessonCount = await Lesson.countDocuments({ courseId: course.id });
-        return { ...course, lesson_count: lessonCount };
-      })
-    );
-
-    res.json(coursesWithLessons);
+    res.json({
+      courses: result.rows
+    });
   } catch (error) {
-    console.error('Get my courses error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
-export const updateCourse = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { title, description, category } = req.body;
-
-    const result = await pool.query(
-      'UPDATE courses SET title = $1, description = $2, category = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 RETURNING *',
-      [title, description, category, id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Course not found' });
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Update course error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
-export const deleteCourse = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Delete associated lessons first
-    await Lesson.deleteMany({ courseId: parseInt(id) });
-
-    const result = await pool.query('DELETE FROM courses WHERE id = $1 RETURNING *', [id]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Course not found' });
-    }
-
-    res.json({ message: 'Course deleted successfully' });
-  } catch (error) {
-    console.error('Delete course error:', error);
+    console.error('GET MY COURSES ERROR:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

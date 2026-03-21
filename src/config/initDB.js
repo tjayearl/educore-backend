@@ -3,6 +3,7 @@ import pool from './postgres.js';
 export const initPostgresDB = async () => {
   try {
     // Drop existing tables (in reverse order due to foreign keys)
+    await pool.query('DROP TABLE IF EXISTS audit_logs CASCADE');
     await pool.query('DROP TABLE IF EXISTS progress CASCADE');
     await pool.query('DROP TABLE IF EXISTS lessons CASCADE');
     await pool.query('DROP TABLE IF EXISTS courses CASCADE');
@@ -16,7 +17,8 @@ export const initPostgresDB = async () => {
         email VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
         role VARCHAR(50) DEFAULT 'learner',
-        created_at TIMESTAMP DEFAULT NOW()
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
       )
     `);
 
@@ -27,8 +29,9 @@ export const initPostgresDB = async () => {
         title VARCHAR(255) NOT NULL,
         description TEXT,
         category VARCHAR(100),
-        instructor_id INTEGER REFERENCES users(id),
-        created_at TIMESTAMP DEFAULT NOW()
+        instructor_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
       )
     `);
 
@@ -39,10 +42,9 @@ export const initPostgresDB = async () => {
         course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
         title VARCHAR(255) NOT NULL,
         content_type VARCHAR(50),
-        content_url TEXT,
-        content_body TEXT,
         lesson_order INTEGER,
-        created_at TIMESTAMP DEFAULT NOW()
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
       )
     `);
 
@@ -56,6 +58,32 @@ export const initPostgresDB = async () => {
         completed_at TIMESTAMP DEFAULT NOW(),
         UNIQUE(user_id, lesson_id)
       )
+    `);
+
+    // Create audit_logs table for compliance and security
+    await pool.query(`
+      CREATE TABLE audit_logs (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        user_role VARCHAR(50),
+        action VARCHAR(100) NOT NULL,
+        resource_type VARCHAR(50),
+        resource_id INTEGER,
+        status_code INTEGER,
+        success BOOLEAN,
+        ip_address VARCHAR(45),
+        user_agent TEXT,
+        request_body TEXT,
+        response_body TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // Create index for faster audit log queries
+    await pool.query(`
+      CREATE INDEX idx_audit_logs_user_id ON audit_logs(user_id);
+      CREATE INDEX idx_audit_logs_action ON audit_logs(action);
+      CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at);
     `);
 
     console.log('✓ PostgreSQL tables initialized');

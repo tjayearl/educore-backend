@@ -2,24 +2,14 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import pool from "../config/postgres.js";
 
+const SALT_ROUNDS = 12; // Higher = more secure but slower
+
 // ================= REGISTER =================
 export const register = async (req, res) => {
   try {
     const { full_name, email, password, role } = req.body;
 
-    // ✅ VALIDATION
-    if (!full_name || !email || !password) {
-      return res.status(400).json({
-        message: "All fields are required",
-      });
-    }
-    if (password.length < 8) {
-      return res.status(400).json({
-        message: "Password must be at least 8 characters",
-      });
-    }
-
-    // ✅ CHECK IF USER EXISTS
+    // Check if user exists
     const existingUser = await pool.query(
       "SELECT * FROM users WHERE email = $1",
       [email]
@@ -31,16 +21,16 @@ export const register = async (req, res) => {
       });
     }
 
-    // ✅ HASH PASSWORD
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Hash password with bcrypt (12 rounds for security)
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
-    // ✅ ROLE LOGIC
+    // Determine role
     let userRole = "learner"; // default
     if (role === "admin") {
       userRole = "admin";
     }
 
-    // ✅ CREATE USER IN DATABASE
+    // Create user in database
     const result = await pool.query(
       `INSERT INTO users (full_name, email, password, role, created_at) 
        VALUES ($1, $2, $3, $4, NOW()) 
@@ -50,7 +40,7 @@ export const register = async (req, res) => {
 
     const newUser = result.rows[0];
 
-    // ✅ CREATE TOKEN
+    // Create JWT token
     const token = jwt.sign(
       { id: newUser.id, role: newUser.role },
       process.env.JWT_SECRET || "SECRET_KEY",
@@ -70,7 +60,7 @@ export const register = async (req, res) => {
   } catch (error) {
     console.error("REGISTER ERROR:", error);
     res.status(500).json({
-      message: "Server error. Check server logs for details.",
+      message: "Server error. Please try again later.",
     });
   }
 };
@@ -80,14 +70,7 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // ✅ VALIDATION
-    if (!email || !password) {
-      return res.status(400).json({
-        message: "Email and password are required",
-      });
-    }
-
-    // ✅ FIND USER IN DATABASE
+    // Find user in database
     const result = await pool.query(
       "SELECT * FROM users WHERE email = $1",
       [email]
@@ -101,7 +84,7 @@ export const login = async (req, res) => {
 
     const user = result.rows[0];
 
-    // ✅ CHECK PASSWORD
+    // Verify password with bcrypt
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({
@@ -109,7 +92,7 @@ export const login = async (req, res) => {
       });
     }
 
-    // ✅ CREATE TOKEN
+    // Create JWT token
     const token = jwt.sign(
       { id: user.id, role: user.role },
       process.env.JWT_SECRET || "SECRET_KEY",
@@ -129,7 +112,7 @@ export const login = async (req, res) => {
   } catch (error) {
     console.error("LOGIN ERROR:", error);
     res.status(500).json({
-      message: "Server error. Check server logs for details.",
+      message: "Server error. Please try again later.",
     });
   }
 };

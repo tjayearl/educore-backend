@@ -1,45 +1,61 @@
 import pool from '../config/postgres.js';
 
-const auditLogger = (action, entityType) => {
+/**
+ * Audit Logger Middleware
+ * Logs all admin actions to the database for compliance and security
+ * 
+ * @param {string} action - The action being performed (e.g., 'CREATE_COURSE', 'ADD_LESSON')
+ * @param {string} resourceType - Type of resource (e.g., 'course', 'lesson', 'user')
+ */
+export const auditLogger = (action, resourceType) => {
   return async (req, res, next) => {
-    // Capture the original send function to intercept the response
-    const originalSend = res.json;
-
-    res.json = function (body) {
-      // Restore original function to avoid infinite loop
-      res.json = originalSend;
-
-      // Execute logging asynchronously (fire and forget)
-      // We use setImmediate to ensure we don't block the response
-      setImmediate(async () => {
-        try {
-          // Only log successful operations (2xx status codes)
-          if (res.statusCode >= 200 && res.statusCode < 300) {
-            // Try to get user from request (Auth middleware) or response body (Login/Register)
-            const userId = req.user ? req.user.id : (body && body.user ? body.user.id : null);
-            
-            const entityId = body.id || body._id || (req.params.id ? req.params.id : null);
-            
-            // details can be the body title, or specific updates
-            const details = body.title || req.body.title || 'Operation completed';
-
-            await pool.query(
-              `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details, ip_address) 
-               VALUES ($1, $2, $3, $4, $5, $6)`,
-              [userId, action, entityType, entityId, details, req.ip]
-            );
-          }
-        } catch (error) {
-          console.error('Audit logging failed:', error);
-        }
-      });
-
-      // Call the original response
-      return originalSend.call(this, body);
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+    
+    // Store original send function
+    const originalSend = res.send;
+    
+    // Override res.send to capture response
+    res.send = function(data) {
+      const statusCode = res.statusCode;
+      const success = statusCode >= 200 && statusCode < 300;
+      
+      // Log the audit trail
+      pool.query(`
+        INSERT INTO audit_logs (
+          user_id, 
+          user_role, 
+          action, 
+          resource_type, 
+          resource_id,
+          status_code,
+          success,
+          ip_address,
+          user_agent,
+          request_body,
+          response_body,
+          created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+      `, [
+        userId,
+        userRole,
+        action,
+        resourceType,
+        req.params.id || req.params.courseId || null,
+        statusCode,
+        success,
+        ipAddress,
+        userAgent,
+        JSON.stringify(req.body),
+        typeof data === 'string' ? data.substring(0, 1000) : JSON.stringify(data).substring(0, 1000) // Limit to 1000 chars
+      ]).catch(err => console.error('Audit log error:', err));
+      
+      // Call original send
+      originalSend.call(this, data);
     };
-
+    
     next();
   };
 };
-
-export default auditLogger;

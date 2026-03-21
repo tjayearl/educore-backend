@@ -113,3 +113,74 @@ export const getMyCourses = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+// ================= UPDATE COURSE (Admin Only) =================
+export const updateCourse = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, category } = req.body;
+    const instructorId = req.user.id;
+
+    if (!title || !description) {
+      return res.status(400).json({ message: 'Title and description are required' });
+    }
+
+    // Check if course exists and belongs to this admin
+    const checkResult = await pool.query(
+      'SELECT * FROM courses WHERE id = $1 AND instructor_id = $2',
+      [id, instructorId]
+    );
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Course not found or unauthorized' });
+    }
+
+    // Update the course
+    const result = await pool.query(`
+      UPDATE courses 
+      SET title = $1, description = $2, category = $3, updated_at = NOW()
+      WHERE id = $4 AND instructor_id = $5
+      RETURNING id, title, description, category, updated_at
+    `, [title, description, category || 'General', id, instructorId]);
+
+    res.json({
+      message: 'Course updated successfully',
+      course: result.rows[0]
+    });
+  } catch (error) {
+    console.error('UPDATE COURSE ERROR:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// ================= DELETE COURSE (Admin Only) =================
+export const deleteCourse = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const instructorId = req.user.id;
+
+    // Check if course exists and belongs to this admin
+    const checkResult = await pool.query(
+      'SELECT * FROM courses WHERE id = $1 AND instructor_id = $2',
+      [id, instructorId]
+    );
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Course not found or unauthorized' });
+    }
+
+    // Delete the course (cascade will delete lessons and progress)
+    await pool.query(
+      'DELETE FROM courses WHERE id = $1 AND instructor_id = $2',
+      [id, instructorId]
+    );
+
+    res.json({
+      message: 'Course deleted successfully',
+      success: true
+    });
+  } catch (error) {
+    console.error('DELETE COURSE ERROR:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

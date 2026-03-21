@@ -2,16 +2,11 @@ import pool from './postgres.js';
 
 export const initPostgresDB = async () => {
   try {
-    // Drop existing tables (in reverse order due to foreign keys)
-    await pool.query('DROP TABLE IF EXISTS audit_logs CASCADE');
-    await pool.query('DROP TABLE IF EXISTS progress CASCADE');
-    await pool.query('DROP TABLE IF EXISTS lessons CASCADE');
-    await pool.query('DROP TABLE IF EXISTS courses CASCADE');
-    await pool.query('DROP TABLE IF EXISTS users CASCADE');
+    console.log('🔄 Initializing PostgreSQL database...');
 
-    // Create users table
+    // Create users table (IF NOT EXISTS)
     await pool.query(`
-      CREATE TABLE users (
+      CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         full_name VARCHAR(255) NOT NULL,
         email VARCHAR(255) UNIQUE NOT NULL,
@@ -22,9 +17,9 @@ export const initPostgresDB = async () => {
       )
     `);
 
-    // Create courses table
+    // Create courses table (IF NOT EXISTS)
     await pool.query(`
-      CREATE TABLE courses (
+      CREATE TABLE IF NOT EXISTS courses (
         id SERIAL PRIMARY KEY,
         title VARCHAR(255) NOT NULL,
         description TEXT,
@@ -35,9 +30,9 @@ export const initPostgresDB = async () => {
       )
     `);
 
-    // Create lessons table
+    // Create lessons table (IF NOT EXISTS)
     await pool.query(`
-      CREATE TABLE lessons (
+      CREATE TABLE IF NOT EXISTS lessons (
         id SERIAL PRIMARY KEY,
         course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
         title VARCHAR(255) NOT NULL,
@@ -48,9 +43,9 @@ export const initPostgresDB = async () => {
       )
     `);
 
-    // Create progress table
+    // Create progress table (IF NOT EXISTS)
     await pool.query(`
-      CREATE TABLE progress (
+      CREATE TABLE IF NOT EXISTS progress (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
@@ -60,9 +55,9 @@ export const initPostgresDB = async () => {
       )
     `);
 
-    // Create audit_logs table for compliance and security
+    // Create audit_logs table (IF NOT EXISTS)
     await pool.query(`
-      CREATE TABLE audit_logs (
+      CREATE TABLE IF NOT EXISTS audit_logs (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
         user_role VARCHAR(50),
@@ -79,16 +74,20 @@ export const initPostgresDB = async () => {
       )
     `);
 
-    // Create index for faster audit log queries
+    // Create indexes if they don't exist
     await pool.query(`
-      CREATE INDEX idx_audit_logs_user_id ON audit_logs(user_id);
-      CREATE INDEX idx_audit_logs_action ON audit_logs(action);
-      CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at);
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id)
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action)
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at)
     `);
 
-    console.log('✓ PostgreSQL tables initialized');
+    console.log('✅ PostgreSQL tables initialized successfully');
   } catch (error) {
-    console.error('PostgreSQL initialization error:', error);
+    console.error('❌ PostgreSQL initialization error:', error);
     throw error;
   }
 };

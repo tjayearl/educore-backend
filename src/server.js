@@ -1,25 +1,25 @@
 import 'dotenv/config';
 import app from './app.js';
-import connectMongoDB from './config/mongodb.js';
 import { initPostgresDB } from './config/initDB.js';
+import { connectMongoDB } from './config/mongodb.js';
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
+// Initialize databases then start server
 const startServer = async () => {
   try {
+    // Initialize PostgreSQL
+    await initPostgresDB();
+    
     // Connect to MongoDB
     await connectMongoDB();
 
-    // Initialize PostgreSQL tables
-    await initPostgresDB();
-
+    // Start Express server
     app.listen(PORT, () => {
-      console.log(`✓ Server running on port ${PORT}`);
-      console.log(`✓ API: http://localhost:${PORT}`);
-      console.log(`✓ Health: http://localhost:${PORT}/health`);
+      console.log(`✅ Server running on port ${PORT}`);
     });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    console.error('❌ Failed to start server:', error);
     process.exit(1);
   }
 };

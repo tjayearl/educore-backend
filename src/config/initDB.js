@@ -2,9 +2,15 @@ import pool from './postgres.js';
 
 export const initPostgresDB = async () => {
   try {
+    // Drop existing tables (in reverse order due to foreign keys)
+    await pool.query('DROP TABLE IF EXISTS progress CASCADE');
+    await pool.query('DROP TABLE IF EXISTS lessons CASCADE');
+    await pool.query('DROP TABLE IF EXISTS courses CASCADE');
+    await pool.query('DROP TABLE IF EXISTS users CASCADE');
+
     // Create users table
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS users (
+      CREATE TABLE users (
         id SERIAL PRIMARY KEY,
         full_name VARCHAR(255) NOT NULL,
         email VARCHAR(255) UNIQUE NOT NULL,
@@ -16,7 +22,7 @@ export const initPostgresDB = async () => {
 
     // Create courses table
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS courses (
+      CREATE TABLE courses (
         id SERIAL PRIMARY KEY,
         title VARCHAR(255) NOT NULL,
         description TEXT,
@@ -28,7 +34,7 @@ export const initPostgresDB = async () => {
 
     // Create lessons table
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS lessons (
+      CREATE TABLE lessons (
         id SERIAL PRIMARY KEY,
         course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
         title VARCHAR(255) NOT NULL,
@@ -42,7 +48,7 @@ export const initPostgresDB = async () => {
 
     // Create progress table
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS progress (
+      CREATE TABLE progress (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
